@@ -88,6 +88,7 @@ let bestScore = 0;
 let lastFrame = 0;
 let lasers = [];
 let nextLaserIn = 2.5;
+let lastLaserY = null;
 try { bestScore = parseInt(localStorage.getItem('cloneWarsBest'), 10) || 0; } catch (error) {}
 
 function soundLine() { return 'Press M to turn sound ' + (muted ? 'on.' : 'off.'); }
@@ -137,6 +138,7 @@ function startGame() {
   secondsSinceCrash = 0;
   lasers = [];
   nextLaserIn = 2.5;
+  lastLaserY = null;
   overlay.hidden = true;
   play('flap');
 }
@@ -152,9 +154,26 @@ function addPipe(pipeGap) {
 }
 
 function addLaser() {
-  const safeTop = 60;
-  const safeBottom = CONFIG.canvasHeight - CONFIG.groundHeight - 60;
-  lasers.push({ x: CONFIG.canvasWidth + 20, y: safeTop + Math.random() * (safeBottom - safeTop), width: 26, height: 5, speed: 230 });
+  const laserWidth = 26;
+  const laserHeight = 5;
+  const halfBird = CONFIG.birdSize / 2;
+  const safeTop = Math.max(0, halfBird);
+  const safeBottom = Math.max(safeTop, CONFIG.canvasHeight - CONFIG.groundHeight - halfBird - laserHeight);
+  const range = safeBottom - safeTop;
+  const minimumSeparation = Math.min(CONFIG.birdSize, range / 2);
+  let laserY = safeTop + Math.random() * range;
+
+  if (lastLaserY !== null && range > 0 && minimumSeparation > 0) {
+    for (let attempt = 0; attempt < 12 && Math.abs(laserY - lastLaserY) < minimumSeparation; attempt += 1) {
+      laserY = safeTop + Math.random() * range;
+    }
+    if (Math.abs(laserY - lastLaserY) < minimumSeparation) {
+      laserY = lastLaserY <= safeTop + range / 2 ? safeBottom : safeTop;
+    }
+  }
+
+  lastLaserY = laserY;
+  lasers.push({ x: CONFIG.canvasWidth + 20, y: laserY, width: laserWidth, height: laserHeight, speed: 230 });
 }
 
 function crash() {
